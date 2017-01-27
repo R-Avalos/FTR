@@ -88,11 +88,11 @@ filenames <- list.files(path = "./DAM",
 setwd("./DAM") #change working director to DAM
 
 import_list <- lapply(filenames, read_csv_filename) # convert files in the list to data frames
-combined <- do.call("rbind", import_list) # combine the data frames into one
+combinedd <- do.call("rbind", import_list) # combined the data frames into one
 str(import_list)
 setwd("..") # return to parent direcotry
 
-# Jan2016_DAM <- read.csv("January_2016_DAM_Posting.csv", 
+# Jan2016_DAM <- read.csv("./DAM/January_2016_DAM_Posting.csv", 
 #                         skip = 3,
 #                         col.names = c("PTID", "PTID_Name", "Cost_of_Losses", "Cost_of_Congestion", "Total_Hours", "Congested_Hours", "avg_hourly_cost_of_losses", "avg_hourly_cost_of_congestion"),
 #                         stringsAsFactors = FALSE)
@@ -100,15 +100,43 @@ setwd("..") # return to parent direcotry
 # str(Jan2016_DAM)
 
 # Convert Currency to numeric
-Jan2016_DAM$Cost_of_Losses <- convertCurrency(Jan2016_DAM$Cost_of_Losses)
-Jan2016_DAM$Cost_of_Congestion <- convertCurrency(Jan2016_DAM$Cost_of_Congestion)
-Jan2016_DAM$avg_hourly_cost_of_losses <- convertCurrency(Jan2016_DAM$avg_hourly_cost_of_losses)
-Jan2016_DAM$avg_hourly_cost_of_congestion <- convertCurrency(Jan2016_DAM$avg_hourly_cost_of_congestion)
+combined$Cost_of_Losses <- convertCurrency(combined$Cost_of_Losses)
+combined$Cost_of_Congestion <- convertCurrency(combined$Cost_of_Congestion)
+combined$avg_hourly_cost_of_losses <- convertCurrency(combined$avg_hourly_cost_of_losses)
+combined$avg_hourly_cost_of_congestion <- convertCurrency(combined$avg_hourly_cost_of_congestion)
+
+## Breakout Month and Year from filename with Regex
+combined$month <- sapply(strsplit(combined$filename, split = "_"), "[", 1) #Breakout Month
+combined$year <- sapply(strsplit(combined$filename, split = "_"), "[", 2) #Breakout Year
 
 
 ## Get Contract payoffs
 # POI - POW * MWh
 # Join POI monthly totals
+myvars <- c("PTID", "PTID_Name", "Cost_of_Losses", "Cost_of_Congestion", "Total_Hours", "Congested_Hours", "month", "year")
+x <- combined[myvars]
+x <- rename(x, `POI ID` = PTID, 
+            PTID_Name_POI = PTID_Name, 
+            Cost_of_Losses_POI = Cost_of_Losses,
+            Cost_of_Congestion_POI = Cost_of_Congestion,
+            Total_Hours_POI = Total_Hours,
+            Congested_Hours_POI = Congested_Hours,
+            month_POI = month,
+            year_POI = year)
+x2 <- combined[myvars]
+x2 <- rename(x2, `POW ID` = PTID, 
+            PTID_Name_POW = PTID_Name, 
+            Cost_of_Losses_POW = Cost_of_Losses,
+            Cost_of_Congestion_POW = Cost_of_Congestion,
+            Total_Hours_POW = Total_Hours,
+            Congested_Hours_POW = Congested_Hours,
+            month_POW = month,
+            year_POW = year)
+
+Jan2016_monthly_contracts$PTID <- Jan2016_monthly_contracts$`POI ID`
+
+First_merge <- inner_join(x = Jan2016_monthly_contracts, y = x, by = "POI ID")
+Second_merge <- inner_join(x = First_merge, y = x2, by = "POW ID")
 
 
 
