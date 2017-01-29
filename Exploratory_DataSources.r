@@ -5,6 +5,8 @@ library(lubridate)
 library(ggplot2)
 library(dplyr)
 
+rm(list = ls()) #Clear Workspace
+
 # setClass("acntngFmt")
 # setAs("character", "acntngFmt",
 #       function(from) as.numeric(sub("\\)", 
@@ -68,7 +70,16 @@ sd(Jan2016$`Market Clr Price`)
 Jan2016_monthly_contracts <- Jan2016 %>%
         filter(days <= 31)
         
+### Add Summer and winter Ttrue Fales
+# Summer vs winter periods: http://www.nyiso.com/public/markets_operations-services-customer_support-faq-index.jsp
+# SUmmer May 1st - Oct 31st
+# Winter Nov 1st - April 30th
 
+Jan2016_monthly_contracts$winter_month <- ifelse(test = (month(Jan2016_monthly_contracts$`Start Date`) > month(mdy("10/31/2016")) & Jan2016_monthly_contracts$days_numeric <= 31) | (month(Jan2016_monthly_contracts$`End Date`)< month(mdy("5/1/2016")) & Jan2016_monthly_contracts$days_numeric <= 31), 
+                                           yes = TRUE, 
+                                           no = FALSE) # If monthly contract, and winter, set to TRUE
+
+summary(Jan2016_monthly_contracts$winter_month) # quick check
 
 ### Load DAM Price Data
 
@@ -88,7 +99,7 @@ filenames <- list.files(path = "./DAM",
 setwd("./DAM") #change working director to DAM
 
 import_list <- lapply(filenames, read_csv_filename) # convert files in the list to data frames
-combinedd <- do.call("rbind", import_list) # combined the data frames into one
+combined <- do.call("rbind", import_list) # combined the data frames into one
 str(import_list)
 setwd("..") # return to parent direcotry
 
@@ -100,10 +111,10 @@ setwd("..") # return to parent direcotry
 # str(Jan2016_DAM)
 
 # Convert Currency to numeric
-combined$Cost_of_Losses <- convertCurrency(combined$Cost_of_Losses)
-combined$Cost_of_Congestion <- convertCurrency(combined$Cost_of_Congestion)
-combined$avg_hourly_cost_of_losses <- convertCurrency(combined$avg_hourly_cost_of_losses)
-combined$avg_hourly_cost_of_congestion <- convertCurrency(combined$avg_hourly_cost_of_congestion)
+# combined$Cost_of_Losses <- convertCurrency(combined$Cost_of_Losses)
+# combined$Cost_of_Congestion <- convertCurrency(combined$Cost_of_Congestion)
+# combined$avg_hourly_cost_of_losses <- convertCurrency(combined$avg_hourly_cost_of_losses)
+# combined$avg_hourly_cost_of_congestion <- convertCurrency(combined$avg_hourly_cost_of_congestion)
 
 ## Breakout Month and Year from filename with Regex
 combined$month <- sapply(strsplit(combined$filename, split = "_"), "[", 1) #Breakout Month
