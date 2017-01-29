@@ -80,6 +80,7 @@ Jan2016_monthly_contracts$winter_month <- ifelse(test = (month(Jan2016_monthly_c
                                            no = FALSE) # If monthly contract, and winter, set to TRUE
 
 summary(Jan2016_monthly_contracts$winter_month) # quick check
+summary(Jan2016_monthly_contracts)
 
 ### Load DAM Price Data
 
@@ -103,18 +104,18 @@ combined <- do.call("rbind", import_list) # combined the data frames into one
 str(import_list)
 setwd("..") # return to parent direcotry
 
-# Jan2016_DAM <- read.csv("./DAM/January_2016_DAM_Posting.csv", 
-#                         skip = 3,
-#                         col.names = c("PTID", "PTID_Name", "Cost_of_Losses", "Cost_of_Congestion", "Total_Hours", "Congested_Hours", "avg_hourly_cost_of_losses", "avg_hourly_cost_of_congestion"),
-#                         stringsAsFactors = FALSE)
+Jan2016_DAM <- read.csv("./DAM/January_2016_DAM_Posting.csv",
+                        skip = 3,
+                        col.names = c("PTID", "PTID_Name", "Cost_of_Losses", "Cost_of_Congestion", "Total_Hours", "Congested_Hours", "avg_hourly_cost_of_losses", "avg_hourly_cost_of_congestion"),
+                        stringsAsFactors = FALSE)
 # summary(Jan2016_DAM)
 # str(Jan2016_DAM)
 
-# Convert Currency to numeric
-# combined$Cost_of_Losses <- convertCurrency(combined$Cost_of_Losses)
-# combined$Cost_of_Congestion <- convertCurrency(combined$Cost_of_Congestion)
-# combined$avg_hourly_cost_of_losses <- convertCurrency(combined$avg_hourly_cost_of_losses)
-# combined$avg_hourly_cost_of_congestion <- convertCurrency(combined$avg_hourly_cost_of_congestion)
+## Convert Currency to numeric
+combined$Cost_of_Losses <- convertCurrency(combined$Cost_of_Losses)
+combined$Cost_of_Congestion <- convertCurrency(combined$Cost_of_Congestion)
+combined$avg_hourly_cost_of_losses <- convertCurrency(combined$avg_hourly_cost_of_losses)
+combined$avg_hourly_cost_of_congestion <- convertCurrency(combined$avg_hourly_cost_of_congestion)
 
 ## Breakout Month and Year from filename with Regex
 combined$month <- sapply(strsplit(combined$filename, split = "_"), "[", 1) #Breakout Month
@@ -146,10 +147,22 @@ x2 <- rename(x2, `POW ID` = PTID,
 
 Jan2016_monthly_contracts$PTID <- Jan2016_monthly_contracts$`POI ID`
 
+
+### Merge... need to add DAM for Each Month and merge according to month
+###
+
 First_merge <- inner_join(x = Jan2016_monthly_contracts, y = x, by = "POI ID")
 Second_merge <- inner_join(x = First_merge, y = x2, by = "POW ID")
 
+####  Revenue
+Second_merge$revenue <- ifelse(test = Second_merge$winter_month==T, yes = Second_merge$`MW Winter`, no = Second_merge$`MW Summer`) * (-1*Second_merge$Cost_of_Congestion_POW)-(-1*Second_merge$Cost_of_Congestion_POI) # If winter, use winter MWh, else use Summer MWh, then multiply by congestion between points to get rent
 
+Second_merge$profit <- Second_merge$revenue - Second_merge$`Market Clr Price`
+
+summary(Second_merge$revenue)
+plot(Second_merge$revenue)
+summary(Second_merge$profit)
+plot(Second_merge$`End Date`, Second_merge$profit)
 
 ## Plots
 plot_holderprice <- ggplot(data=Jan2016, 
