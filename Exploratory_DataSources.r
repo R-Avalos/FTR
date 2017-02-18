@@ -2,8 +2,11 @@
 
 library(readr)
 library(lubridate)
-library(ggplot2)
 library(dplyr)
+library(ggplot2)
+library(ggExtra)
+library(scales)
+library(ggthemes)
 
 rm(list = ls()) #Clear Workspace
 
@@ -47,42 +50,62 @@ convertCurrency <- function(currency) {
 
 list.files()
 
-### Load Contract Data
-Jan2016 <- read_csv("TransmissionContracts_NYISO_example_Jan2016.csv")
-Jan2016$`End Date` <- dmy(Jan2016$`End Date`)
-Jan2016$`Start Date` <- dmy(Jan2016$`Start Date`)
-Jan2016$`Primary Holder` <- as.factor(Jan2016$`Primary Holder`)
+###############################
+### Load Contract Data  ######
+#############################
 
-Jan2016$`Market Clr Price` <- gsub("N/A", "", Jan2016$`Market Clr Price`)
-Jan2016$`Market Clr Price` <- as.numeric(Jan2016$`Market Clr Price`)
+# Source all awards: http://tcc.nyiso.com/tcc/public/view_awards_summary.do
+# Source: http://tcc.nyiso.com/tcc/public/view_summary_of_transmission_contracts.do
+# Manually removed footers from csv
 
+contract_filenames <- list.files( pattern = "*.csv") #get a list of all contract files
+contract_import_list <- lapply(contract_filenames, read_csv) # convert files in the list to data frames
+combined_TCC <- do.call("rbind", contract_import_list) # combined the data frames into one
+remove(contract_filenames, contract_import_list) #remove unncessary files
 
-Jan2016$days <- Jan2016$`End Date` - Jan2016$`Start Date` + 1 ### Contract Length in days
-Jan2016$days_numeric <- as.numeric(Jan2016$days)
+# Transform
+combined_TCC$`End Date` <- dmy(combined_TCC$`End Date`)
+combined_TCC$`Start Date` <- dmy(combined_TCC$`Start Date`)
+combined_TCC$`Primary Holder` <- as.factor(combined_TCC$`Primary Holder`)
 
-Jan2016 #review
-summary(Jan2016$`Market Clr Price`)
-summary(Jan2016)
-sd(Jan2016$`Market Clr Price`)
+combined_TCC$`Market Clr Price` <- gsub("N/A", "", combined_TCC$`Market Clr Price`)
+combined_TCC$`Market Clr Price` <- as.numeric(combined_TCC$`Market Clr Price`)
+
+combined_TCC$days <- combined_TCC$`End Date` - combined_TCC$`Start Date` + 1 ### Contract Length in days
+combined_TCC$days_numeric <- as.numeric(combined_TCC$days)
+
+combined_TCC #review
+summary(combined_TCC$`Market Clr Price`)
+summary(combined_TCC)
 
 
 ### Subset Contract Data to Monthly FTRs
-Jan2016_monthly_contracts <- Jan2016 %>%
+combined_TCC_monthly_contracts <- combined_TCC %>%
         filter(days <= 31)
-        
+combined_TCC_monthly_contracts$month <- month(combined_TCC_monthly_contracts$`Start Date`)
+combined_TCC_monthly_contracts$year <- year(combined_TCC_monthly_contracts$`Start Date`)
+combined_TCC_monthly_contracts$`POI ID` <- as.numeric(combined_TCC_monthly_contracts$`POI ID`)
+combined_TCC_monthly_contracts$`POW ID` <- as.numeric(combined_TCC_monthly_contracts$`POW ID`)
+
+
 ### Add Summer and winter Ttrue Fales
 # Summer vs winter periods: http://www.nyiso.com/public/markets_operations-services-customer_support-faq-index.jsp
 # SUmmer May 1st - Oct 31st
 # Winter Nov 1st - April 30th
 
-Jan2016_monthly_contracts$winter_month <- ifelse(test = (month(Jan2016_monthly_contracts$`Start Date`) > month(mdy("10/31/2016")) & Jan2016_monthly_contracts$days_numeric <= 31) | (month(Jan2016_monthly_contracts$`End Date`)< month(mdy("5/1/2016")) & Jan2016_monthly_contracts$days_numeric <= 31), 
+combined_TCC_monthly_contracts$winter_month <- ifelse(test = (month(combined_TCC_monthly_contracts$`Start Date`) > month(mdy("10/31/2016")) & combined_TCC_monthly_contracts$days_numeric <= 31) | (month(combined_TCC_monthly_contracts$`End Date`)< month(mdy("5/1/2016")) & combined_TCC_monthly_contracts$days_numeric <= 31), 
                                            yes = TRUE, 
                                            no = FALSE) # If monthly contract, and winter, set to TRUE
 
-summary(Jan2016_monthly_contracts$winter_month) # quick check
-summary(Jan2016_monthly_contracts)
+summary(combined_TCC_monthly_contracts$winter_month) # quick check
+summary(combined_TCC_monthly_contracts)
 
-### Load DAM Price Data
+
+####################################
+###  Load DAM Price Data  #########
+##################################
+
+# 
 
 # Function to add title to the last column
 read_csv_filename <- function(filename){
@@ -92,7 +115,7 @@ read_csv_filename <- function(filename){
                         stringsAsFactors = FALSE)
         ret$filename <- filename # Adds title of filename to column
         ret
-}
+} ### Custom function to read DAM csv's based on NYISO's format
 
 filenames <- list.files(path = "./DAM", 
                         pattern = "*.csv") #get a list of all day ahead market prices
@@ -100,71 +123,77 @@ filenames <- list.files(path = "./DAM",
 setwd("./DAM") #change working director to DAM
 
 import_list <- lapply(filenames, read_csv_filename) # convert files in the list to data frames
-combined <- do.call("rbind", import_list) # combined the data frames into one
-str(import_list)
+combined_dam <- do.call("rbind", import_list) # combined the data frames into one
 setwd("..") # return to parent direcotry
+remove(filenames, import_list) # remove unnecessary files
 
-Jan2016_DAM <- read.csv("./DAM/January_2016_DAM_Posting.csv",
-                        skip = 3,
-                        col.names = c("PTID", "PTID_Name", "Cost_of_Losses", "Cost_of_Congestion", "Total_Hours", "Congested_Hours", "avg_hourly_cost_of_losses", "avg_hourly_cost_of_congestion"),
-                        stringsAsFactors = FALSE)
-# summary(Jan2016_DAM)
-# str(Jan2016_DAM)
-
-## Convert Currency to numeric
-combined$Cost_of_Losses <- convertCurrency(combined$Cost_of_Losses)
-combined$Cost_of_Congestion <- convertCurrency(combined$Cost_of_Congestion)
-combined$avg_hourly_cost_of_losses <- convertCurrency(combined$avg_hourly_cost_of_losses)
-combined$avg_hourly_cost_of_congestion <- convertCurrency(combined$avg_hourly_cost_of_congestion)
+## Format data
+combined_dam$Cost_of_Losses <- convertCurrency(combined_dam$Cost_of_Losses)
+combined_dam$Cost_of_Congestion <- convertCurrency(combined_dam$Cost_of_Congestion)
+combined_dam$avg_hourly_cost_of_losses <- convertCurrency(combined_dam$avg_hourly_cost_of_losses)
+combined_dam$avg_hourly_cost_of_congestion <- convertCurrency(combined_dam$avg_hourly_cost_of_congestion)
 
 ## Breakout Month and Year from filename with Regex
-combined$month <- sapply(strsplit(combined$filename, split = "_"), "[", 1) #Breakout Month
-combined$year <- sapply(strsplit(combined$filename, split = "_"), "[", 2) #Breakout Year
+combined_dam$month <- sapply(strsplit(combined_dam$filename, split = "_"), "[", 1) #Breakout Month
+combined_dam$year <- sapply(strsplit(combined_dam$filename, split = "_"), "[", 2) #Breakout Year
+combined_dam$date <- ymd(paste0(combined_dam$year, combined_dam$month, "16"))
+combined_dam$month <- month(combined_dam$date) #convert to month, date format
+combined_dam$year <- year(combined_dam$date) #convert to year, date format
 
+summary(combined_dam) # Review
+plot(combined_dam$date, combined_dam$avg_hourly_cost_of_congestion)
 
 ## Get Contract payoffs
 # POI - POW * MWh
 # Join POI monthly totals
-myvars <- c("PTID", "PTID_Name", "Cost_of_Losses", "Cost_of_Congestion", "Total_Hours", "Congested_Hours", "month", "year")
-x <- combined[myvars]
-x <- rename(x, `POI ID` = PTID, 
-            PTID_Name_POI = PTID_Name, 
+myvars <- c("PTID", "PTID_Name", "Cost_of_Losses", "Cost_of_Congestion", "Total_Hours", "Congested_Hours", "month", "year", "date")
+monthly_DAM <- combined_dam[myvars]
+monthly_DAM_POI <- rename(monthly_DAM, `POI ID` = PTID,
+            PTID_Name_POI = PTID_Name,
             Cost_of_Losses_POI = Cost_of_Losses,
             Cost_of_Congestion_POI = Cost_of_Congestion,
             Total_Hours_POI = Total_Hours,
-            Congested_Hours_POI = Congested_Hours,
-            month_POI = month,
-            year_POI = year)
-x2 <- combined[myvars]
-x2 <- rename(x2, `POW ID` = PTID, 
-            PTID_Name_POW = PTID_Name, 
+            Congested_Hours_POI = Congested_Hours)
+
+monthly_DAM_POW <- rename(monthly_DAM, `POW ID` = PTID,
+            PTID_Name_POW = PTID_Name,
             Cost_of_Losses_POW = Cost_of_Losses,
             Cost_of_Congestion_POW = Cost_of_Congestion,
             Total_Hours_POW = Total_Hours,
-            Congested_Hours_POW = Congested_Hours,
-            month_POW = month,
-            year_POW = year)
-
-Jan2016_monthly_contracts$PTID <- Jan2016_monthly_contracts$`POI ID`
+            Congested_Hours_POW = Congested_Hours)
 
 
 ### Merge... need to add DAM for Each Month and merge according to month
-###
+test <- inner_join(x = combined_TCC_monthly_contracts, y = monthly_DAM_POI, by = c("POI ID", "year", "month"))
+summary(test)
 
-First_merge <- inner_join(x = Jan2016_monthly_contracts, y = x, by = "POI ID")
-Second_merge <- inner_join(x = First_merge, y = x2, by = "POW ID")
+test2 <- inner_join(x = test, y = monthly_DAM_POW, by = c("POW ID", "year", "month")) 
+
 
 ####  Revenue
-Second_merge$revenue <- ifelse(test = Second_merge$winter_month==T, yes = Second_merge$`MW Winter`, no = Second_merge$`MW Summer`) * (-1*Second_merge$Cost_of_Congestion_POW)-(-1*Second_merge$Cost_of_Congestion_POI) # If winter, use winter MWh, else use Summer MWh, then multiply by congestion between points to get rent
+test2$revenue <- ifelse(test = test2$winter_month==T, yes = test2$`MW Winter`, no = test2$`MW Summer`) * (-1*test2$Cost_of_Congestion_POW)-(-1*test2$Cost_of_Congestion_POI) # If winter, use winter MWh, else use Summer MWh, then multiply by congestion between points to get rent
 
-Second_merge$profit <- Second_merge$revenue - Second_merge$`Market Clr Price`
+test2$profit <- test2$revenue - test2$`Market Clr Price`
 
-summary(Second_merge$revenue)
-plot(Second_merge$revenue)
-summary(Second_merge$profit)
-plot(Second_merge$`End Date`, Second_merge$profit)
+summary(test2$revenue)
+plot(test2$revenue)
+summary(test2$profit)
+plot(test2$`End Date`, test2$profit)
+
 
 ## Plots
+plot_profit <- ggplot(test2, 
+                      aes(x = date.x, y = profit, color = winter_month)
+                      ) + 
+        geom_jitter(alpha = 0.2, width = 1) +
+        geom_rangeframe(sides = "l", alpha = 0.2) +
+        geom_hline(yintercept = 0, alpha = 0.2) +
+        scale_y_continuous(labels = comma) +
+        scale_color_manual(values = c("black", "dark grey")) +
+        ggtitle("Monthly NYISO TCC Profits \n") +
+        theme_tufte()
+ggMarginal(plot_profit, type = "density", margins = "y", color = "light grey") # Add histogram on for profit
+
 plot_holderprice <- ggplot(data=Jan2016, 
                            aes(x =`Market Clr Price`,
                                y =`Primary Holder`)
@@ -178,7 +207,7 @@ plot_duration <- ggplot(data=Jan2016,
 ) +
         geom_point(alpha = 0.2) +
         scale_x_continuous(limits = c(0, 1000))
-plot_duration
+plot_holderprice
 
 
 plot(y = Jan2016$`Market Clr Price`, x = Jan2016$`Primary Holder`)
