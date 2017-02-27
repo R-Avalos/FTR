@@ -63,6 +63,7 @@ contract_import_list <- lapply(contract_filenames, read_csv) # convert files in 
 combined_TCC <- do.call("rbind", contract_import_list) # combined the data frames into one
 remove(contract_filenames, contract_import_list) #remove unncessary files
 
+summary(combined_TCC)
 # Transform
 combined_TCC$`End Date` <- dmy(combined_TCC$`End Date`)
 combined_TCC$`Start Date` <- dmy(combined_TCC$`Start Date`)
@@ -189,8 +190,8 @@ plot_profit <- ggplot(test2,
         geom_rangeframe(sides = "l", alpha = 0.2) +
         geom_hline(yintercept = 0, alpha = 0.2) +
         scale_y_continuous(labels = comma) +
-        scale_color_manual(values = c("black", "dark grey")) +
-        ggtitle("Monthly NYISO TCC Profits \n") +
+        scale_color_manual(values = c("black", "dodger blue")) +
+        ggtitle("NYISO Monthly TCC Profits \n") +
         theme_tufte()
 ggMarginal(plot_profit, type = "density", margins = "y", color = "light grey") # Add histogram on for profit
 
