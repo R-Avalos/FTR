@@ -63,7 +63,10 @@ contract_import_list <- lapply(contract_filenames, read_csv) # convert files in 
 combined_TCC <- do.call("rbind", contract_import_list) # combined the data frames into one
 remove(contract_filenames, contract_import_list) #remove unncessary files
 
+# Quick Review
+combined_TCC
 summary(combined_TCC)
+
 # Transform
 combined_TCC$`End Date` <- dmy(combined_TCC$`End Date`)
 combined_TCC$`Start Date` <- dmy(combined_TCC$`Start Date`)
@@ -102,6 +105,11 @@ summary(combined_TCC_monthly_contracts$winter_month) # quick check
 summary(combined_TCC_monthly_contracts)
 
 
+x <- ggplot(combined_TCC_monthly_contracts, aes(x = `Market Clr Price`, y = `Primary Holder`)) +
+        geom_point(alpha = 0.1)
+x
+
+
 ####################################
 ###  Load DAM Price Data  #########
 ##################################
@@ -127,6 +135,7 @@ import_list <- lapply(filenames, read_csv_filename) # convert files in the list 
 combined_dam <- do.call("rbind", import_list) # combined the data frames into one
 setwd("..") # return to parent direcotry
 remove(filenames, import_list) # remove unnecessary files
+summary(combined_dam)
 
 ## Format data
 combined_dam$Cost_of_Losses <- convertCurrency(combined_dam$Cost_of_Losses)
@@ -182,6 +191,19 @@ summary(test2$profit)
 plot(test2$`End Date`, test2$profit)
 
 
+#### Percent Return
+# Return(i) = [Profit(i) / absolute|MarketClearingPrice(i)|] * 100%
+
+test2$abs_mktprice <- abs(test2$`Market Clr Price`)
+# Need to save account for $0.00 market clearing price
+# Change 0.00 to 0.001
+test2$abs_mktprice[test2$abs_mktprice == 0.00] <- 0.01 
+summary(test2$abs_mktprice)
+
+test2$return <- (test2$profit/test2$abs_mktprice)*100
+summary(test2$return)
+plot(test2$`End Date`, test2$return) # quick view
+
 ## Plots
 plot_profit <- ggplot(test2, 
                       aes(x = date.x, y = profit, color = winter_month)
@@ -201,6 +223,15 @@ plot_holderprice <- ggplot(data=Jan2016,
                            ) +
         geom_point(alpha = 0.2)
 plot_holderprice
+
+plot_holderreturn <- ggplot(data = test2, 
+                           aes(x = return,
+                               y =`Primary Holder`)
+) +
+        geom_point(alpha = 0.2)
+plot_holderreturn
+
+
 
 plot_duration <- ggplot(data=Jan2016, 
                            aes(y =`Market Clr Price`,
