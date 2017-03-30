@@ -1,5 +1,5 @@
 #############################################################################
-###### 6 Month TCC                                                      ####
+###### 6 Month TCC, Revenue/Costs/Profit                                ####
 ###########################################################################
 
 # Functions
@@ -34,8 +34,17 @@ TCC_6mo$Cost_of_Congestion_POW <- as.numeric(TCC_6mo$Cost_of_Congestion_POW)
 test6mo$Cost_of_COngestion_POW[[1]] - test6mo$Cost_of_Congestion_POI[[1]]
 test6mo$Cost_of_Congestion_POW <- sapply(test6mo$Cost_of_Congestion_POW, paste0, collapse="") #unlist
 
-# date... year-m-16
 
+
+### More efficient method
+# date... year-m-16... add row for each month of a tcc
+# date range, replicate
+
+
+
+
+
+# Scratch area
 test6mo <- head(TCC_6mo)
 
 test6mo$`POI ID`[1]

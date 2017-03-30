@@ -2,16 +2,25 @@
 ###### Load Day Ahead Market Data                                       ####
 ###########################################################################
 
-
-
-
-
+# Day Ahead Market Prices for the NYISO 2010-2016
+# Source: NYISO DAM, http://www.nyiso.com/public/markets_operations/market_data/tcc/index.jsp
+# Data from this study posted: 
 
 
 ####################################
-###  Load DAM Price Data  #########
+###  Setup Enviornment    #########
 ##################################
 
+### Load Libraries
+library(readr)
+library(lubridate)
+library(dplyr)
+library(ggplot2)
+library(ggExtra)
+library(scales)
+library(ggthemes)
+
+### Create Functions
 # Function to add title to the last column
 read_csv_filename <- function(filename){
         ret <- read.csv(filename, 
@@ -32,31 +41,37 @@ convertAccounting <- function(accounting) {
 } # convert accounting brackets to negative
 
 
+
+####################################
+###  Load DAM Price Data  #########
+##################################
+
 filenames <- list.files(path = "./DAM", 
                         pattern = "*.csv") #get a list of all day ahead market prices
 
 setwd("./DAM") #change working director to DAM
 
 import_list <- lapply(filenames, read_csv_filename) # convert files in the list to data frames
-combined_dam <- do.call("rbind", import_list) # combined the data frames into one
+dam <- do.call("rbind", import_list) # combined the data frames into one
 setwd("..") # return to parent direcotry
 remove(filenames, import_list) # remove unnecessary files
-summary(combined_dam)
+
 
 ## Format data
-combined_dam$Cost_of_Losses <- convertAccounting(combined_dam$Cost_of_Losses) 
-combined_dam$Cost_of_Congestion <- convertAccounting(combined_dam$Cost_of_Congestion)
-combined_dam$avg_hourly_cost_of_losses <- convertAccounting(combined_dam$avg_hourly_cost_of_losses)
-combined_dam$avg_hourly_cost_of_congestion <- convertAccounting(combined_dam$avg_hourly_cost_of_congestion)
+dam$Cost_of_Losses <- convertAccounting(dam$Cost_of_Losses) 
+dam$Cost_of_Congestion <- convertAccounting(dam$Cost_of_Congestion)
+dam$avg_hourly_cost_of_losses <- convertAccounting(dam$avg_hourly_cost_of_losses)
+dam$avg_hourly_cost_of_congestion <- convertAccounting(dam$avg_hourly_cost_of_congestion)
 
-combined_dam$PTID <- as.character(combined_dam$PTID)
+dam$PTID <- as.character(dam$PTID)
 
 ## Breakout Month and Year from filename with Regex
-combined_dam$month <- sapply(strsplit(combined_dam$filename, split = "_"), "[", 1) #Breakout Month
-combined_dam$year <- sapply(strsplit(combined_dam$filename, split = "_"), "[", 2) #Breakout Year
-combined_dam$date <- ymd(paste0(combined_dam$year, combined_dam$month, "16"))
-combined_dam$month <- month(combined_dam$date) #convert to month, date format
-combined_dam$year <- year(combined_dam$date) #convert to year, date format
+dam$month <- sapply(strsplit(dam$filename, split = "_"), "[", 1) #Breakout Month
+dam$year <- sapply(strsplit(dam$filename, split = "_"), "[", 2) #Breakout Year
+dam$date <- ymd(paste0(dam$year, dam$month, "16"))
+dam$month <- month(dam$date) #convert to month, date format
+dam$year <- year(dam$date) #convert to year, date format
 
-# summary(combined_dam) # Review
-
+# summary(dam) # Review
+print(summary(dam)) # print summary data
+print("Day Ahead Market Data Loaded") # print informing user data is loaded

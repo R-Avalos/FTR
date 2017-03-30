@@ -22,6 +22,7 @@ convertCurrency <- function(currency) {
 }  # Convert standard currency to numeric
 
 
+
 ###############################
 ### Load Contract Data  ######
 #############################
@@ -31,22 +32,27 @@ convertCurrency <- function(currency) {
 # Manually removed footers from csv
 
 
-list.files()
+# list.files()
 TCC <- read_csv("TransmissionContracts_2010_2016.csv")
 
 ### Quick Review
 #TCC
 #summary(TCC)
 
-# Transform
+# Transform types
 TCC$`End Date` <- dmy(TCC$`End Date`)
 TCC$`Start Date` <- dmy(TCC$`Start Date`)
 TCC$`Primary Holder` <- as.factor(TCC$`Primary Holder`)
 TCC$`POI ID` <- as.character(TCC$`POI ID`)
+TCC$`POW ID` <- as.character(TCC$`POW ID`)
+TCC$`Contract ID` <- as.character(TCC$`Contract ID`)
+TCC$`Att L Ref` <- as.character(TCC$`Att L Ref`)
+TCC$`Ref Cont ID` <- as.character(TCC$`Ref Cont ID`)
 
 TCC$allocated <- 0
 #sum(TCC$allocated) #check
 TCC$allocated[TCC$`Market Clr Price` == "N/A"] <- 1 # Note the mkt clear prices that were listed as N/A by contract 
+#allocated <- TCC[TCC$allocated==1,]
 
 TCC$`Market Clr Price` <- gsub("N/A", "", TCC$`Market Clr Price`) # Run after noting N/A in allocated column
 TCC$`Market Clr Price` <- as.numeric(TCC$`Market Clr Price`)
@@ -58,6 +64,23 @@ TCC$days_numeric <- as.numeric(TCC$days)
 #summary(TCC)
 
 
+###############################
+### Data Checks            ###
+#############################
+
+#### Check for N/As
+#summary(TCC)
+#summary(TCC$`Primary Holder`) # All contracts have holder
+#summary(TCC$`MW Summer`)
+#summary(TCC$`MW Winter`)
+#summary(TCC$`Market Clr Price`) # Market clearing price has N/As for allocated
+#sum(is.na(TCC$`Market Clr Price`))
+# test <- TCC %>% 
+#         filter(TCC$`Market Clr Price` == 5555 | 
+#                        TCC$`Market Clr Price`== 9999 |
+#                        TCC$`Market Clr Price`== 55555 |
+#                        TCC$`Market Clr Price`== 99999 ) # checking for oddities
+# summary(TCC$`Market Clr Price`)
 
 ###############################
 ### Subset TCC to Monthly  ###
@@ -99,3 +122,12 @@ TCC_6mo <- TCC %>%
 
 TCC_1yr <- TCC %>%
         filter(days > 187 & days < 366)
+
+
+
+
+###############################
+### Confirm results        ###
+#############################
+
+print("Tranmission Congestion Contract (TCC) data loaded")
