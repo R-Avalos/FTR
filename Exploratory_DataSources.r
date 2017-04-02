@@ -196,8 +196,8 @@ summary(test2)
 
 
 
-####  Revenue
-#test2$revenue <- ifelse(test = test2$winter_month==T, yes = test2$`MW Winter`, no = test2$`MW Summer`) * ((-1*test2$Cost_of_Congestion_POW)-(-1*test2$Cost_of_Congestion_POI)) # If winter, use winter MWh, else use Summer MWh, then multiply by congestion between points to get rent
+####  Revenue #####
+# If winter, use winter MWh, else use Summer MWh, then multiply by congestion between points to get rent
 test2$`Market Clr Price`[is.na(test2$`Market Clr Price`)] <- 0 #assign to allocated
 
 test2$mwh_calc <- ifelse(test = test2$winter_month==T, yes = test2$`MW Winter`, no = test2$`MW Summer`)

@@ -5,15 +5,19 @@
 
 
 # Long tail returns
-
 # Ljung Box text to see if there is auto correlation (we don't want that)
 
 install.packages("rugarch")
 
 
-# Modify data
+# data
 
-# Return(i) = [Profit(i) / absolute|MarketClearingPrice(i)|] * 100%
+
+# E(R_i) = R_free + B_i[E(R_mkt) - R_free]  ... CAPM 
+# R_it - R_freet = A_i + B_i[R_mktt - R_freet] + U_it  ... time series
+# TCC_DAM_Monthly$excess return =  A_i + B_i[R_mktt - R_freet] + U_it 
+
+
 
 
 # Run Subsets

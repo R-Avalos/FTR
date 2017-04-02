@@ -73,5 +73,26 @@ dam$month <- month(dam$date) #convert to month, date format
 dam$year <- year(dam$date) #convert to year, date format
 
 # summary(dam) # Review
-print(summary(dam)) # print summary data
+
+# Duplicate data frames and change names, one for Point of Injection (monthly_dam_poi) and one for Point of Withdrawal (monthly_dam_pow)
+# These will be used to join to TCC dataframe
+myvars <- c("PTID", "PTID_Name", "Cost_of_Losses", "Cost_of_Congestion", "Total_Hours", "Congested_Hours", "month", "year", "date")
+monthly_DAM <- dam[myvars]
+monthly_DAM_POI <- rename(monthly_DAM, `POI ID` = PTID,
+                          PTID_Name_POI = PTID_Name,
+                          Cost_of_Losses_POI = Cost_of_Losses,
+                          Cost_of_Congestion_POI = Cost_of_Congestion,
+                          Total_Hours_POI = Total_Hours,
+                          Congested_Hours_POI = Congested_Hours)
+monthly_DAM_POW <- rename(monthly_DAM, `POW ID` = PTID,
+                          PTID_Name_POW = PTID_Name,
+                          Cost_of_Losses_POW = Cost_of_Losses,
+                          Cost_of_Congestion_POW = Cost_of_Congestion,
+                          Total_Hours_POW = Total_Hours,
+                          Congested_Hours_POW = Congested_Hours)
+
+print(summary(monthly_DAM)) # print summary data
 print("Day Ahead Market Data Loaded") # print informing user data is loaded
+remove(dam)
+remove(monthly_DAM)
+remove(myvars)

@@ -34,9 +34,7 @@ convertCurrency <- function(currency) {
 
 # list.files()
 TCC <- read_csv("TransmissionContracts_2010_2016.csv")
-
-### Quick Review
-#TCC
+#TCC #quick review
 #summary(TCC)
 
 # Transform types
@@ -49,7 +47,7 @@ TCC$`Contract ID` <- as.character(TCC$`Contract ID`)
 TCC$`Att L Ref` <- as.character(TCC$`Att L Ref`)
 TCC$`Ref Cont ID` <- as.character(TCC$`Ref Cont ID`)
 
-TCC$allocated <- 0
+TCC$allocated <- 0 
 #sum(TCC$allocated) #check
 TCC$allocated[TCC$`Market Clr Price` == "N/A"] <- 1 # Note the mkt clear prices that were listed as N/A by contract 
 #allocated <- TCC[TCC$allocated==1,]
@@ -59,14 +57,8 @@ TCC$`Market Clr Price` <- as.numeric(TCC$`Market Clr Price`)
 TCC$days <- TCC$`End Date` - TCC$`Start Date` + 1 ### Contract Length in days
 TCC$days_numeric <- as.numeric(TCC$days)
 
-#TCC #review
-#summary(TCC$`Market Clr Price`)
-#summary(TCC)
 
-
-###############################
-### Data Checks            ###
-#############################
+### Data Checks  #############
 
 #### Check for N/As
 #summary(TCC)
@@ -82,17 +74,21 @@ TCC$days_numeric <- as.numeric(TCC$days)
 #                        TCC$`Market Clr Price`== 99999 ) # checking for oddities
 # summary(TCC$`Market Clr Price`)
 
-###############################
-### Subset TCC to Monthly  ###
-#############################
+# Remove duplicated data within dataset
+#duplicate_rows <- TCC[duplicated(TCC),] # duplicated rows in TCCs
+TCC <- TCC %>%
+        distinct(.keep_all = TRUE) # subset to unique TCCs
+#unique_monthly_TCC <- unique_TCC %>%
+#        filter(days_numeric <= 31) # subset to monthly TCCs
+#count(unique(TCC))
 
+
+### Subset TCC to Monthly  ###
 TCC_monthly_contracts <- TCC %>%
         filter(days <= 31)
 TCC_monthly_contracts$month <- month(TCC_monthly_contracts$`Start Date`)
 TCC_monthly_contracts$year <- year(TCC_monthly_contracts$`Start Date`)
-TCC_monthly_contracts$`POI ID` <- as.numeric(TCC_monthly_contracts$`POI ID`)
-TCC_monthly_contracts$`POW ID` <- as.numeric(TCC_monthly_contracts$`POW ID`)
-
+TCC_monthly_contracts$ID <- seq.int(nrow(TCC_monthly_contracts)) #Add TCC ID by row for future 
 # summary(TCC_monthly_contracts)
 
 ### Add Summer and winter True Fales
