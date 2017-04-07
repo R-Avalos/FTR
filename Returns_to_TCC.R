@@ -7,7 +7,7 @@ rm(list = ls()) #Clear Workspace
 
 
 ###  Setup Enviornment ############
-
+options(scipen=999) #remove scientific notation
 
 
 ###  Load Data  ###################
@@ -67,6 +67,15 @@ TCC_DAM_Monthly$return <- (TCC_DAM_Monthly$profit/TCC_DAM_Monthly$abs_mktprice)*
 
 ## TCC Return minus T_Bill
 TCC_DAM_Monthly$excess_return <- TCC_DAM_Monthly$return-TCC_DAM_Monthly$GS1M #Return minus risk free rate of return
+
+summary(TCC_DAM_Monthly$excess_return) #this is a percent!
+prettyNum(mean(TCC_DAM_Monthly$excess_return), big.mark = ",") #this is a percent!
+prettyNum(mean(TCC_DAM_Monthly$return), big.mark = ",") #seems high
+prettyNum(sum(TCC_DAM_Monthly$GS1M), big.mark = ",")
+prettyNum(sum(TCC_DAM_Monthly$profit), big.mark = ",")
+prettyNum(sum(TCC_DAM_Monthly$cost), big.mark = ",")
+
+
 plot(TCC_DAM_Monthly$excess_return, ylim = c(-1000, 1000))
 hist(TCC_DAM_Monthly$excess_return, breaks = 10, ylim = c(-10, 1000))
 
@@ -94,15 +103,38 @@ TCC_Path_Returns <- TCC_DAM_Monthly %>%
                   )
 
 #TCC_Path_Returns$List_Holders[2] #Check names in list
-#summary(TCC_Path_Returns$Path_excess_return)
+summary(TCC_Path_Returns$Path_excess_return)
+summary(TCC_Path_Returns$Path_Profits)
+hist(TCC_Path_Returns$Path_excess_return, breaks = 100)
+hist(TCC_Path_Returns$Path_Profits, breaks = 500)
 
 
+prettyNum(median(TCC_Path_Returns$Path_excess_return), big.mark = ",") #percent
+prettyNum(sum(TCC_Path_Returns$Path_Profits), big.mark = ",")
 
 
+prettyNum(mean(x$Path_excess_return), big.mark = ",")
+prettyNum(sum(x$Path_Revenue), big.mark = ",")
+prettyNum(sum(x$Path_Cost), big.mark = ",")
+prettyNum(sum(x$Path_Profits), big.mark = ",")
 
+
+holder_return <- TCC_DAM_Monthly %>%
+        group_by(`Primary Holder`, year) %>%
+        summarise(Total_profit = sum(profit), 
+                  Mean_excess_return = mean(excess_return),
+                  Median_excess_return = median(excess_return))
 
 
 ### Exporatory Plots #####
+plot_holder <- ggplot(holder_return, 
+                      aes(x = year, y = Total_profit, color = `Primary Holder`)) +
+        geom_line() +
+        theme(legend.position = "none")
+plot_holder
+
+
+
 plot_profit <- ggplot(market_TCC, 
                       aes(x = date.x, y = profit, color = winter_month)
 ) + 

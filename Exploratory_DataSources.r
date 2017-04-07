@@ -7,6 +7,7 @@ library(ggplot2)
 library(ggExtra)
 library(scales)
 library(ggthemes)
+library(Cairo)
 
 rm(list = ls()) #Clear Workspace
 
