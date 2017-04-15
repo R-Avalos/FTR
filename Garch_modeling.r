@@ -30,8 +30,27 @@ x2 <- x2 %>%
         order(x2$date)
 ####
 specification_rugarch <- ugarchspec(mean.model=list(
-        armaOrder=c(0,0)), distribution="std")
+        armaOrder=c(1,1)), distribution="std")
 garch_fit <- ugarchfit(spec = specification_rugarch, data = x$Path_excess_return)
 
 
+
+
+#### Test GARCH Model with Daily rate for Monthly T-Bills ######
+###  needs at least 100 data points ###########################
+
+Data_test <- read.csv(file = "DGS1MO.csv", stringsAsFactors = FALSE) #daily returns 1 month t-bill
+Data_test$DGS1MO <- as.numeric(Data_test$DGS1MO) #convert to numeric
+Data_test$DATE <- ymd(Data_test$DATE) #convert to date format
+Data_test <- Data_test[complete.cases(Data_test),] #remove na rows
+plot(Data_test$DATE, Data_test$DGS1MO) # quick review
+acf(Data_test$DGS1MO) #plot auto correlation
+pacf(Data_test$DGS1MO) #plot partial auto correlation
+
+
+show(specification_rugarch)
+garch_fit_test <- ugarchfit(spec = specification_rugarch, data = Data_test$DGS1MO) # run the model
+coef(garch_fit_test) #coeficient summary
+garch_fit_test # full summary
+plot(sqrt(252)*garch_fit_test@fit$sigma, type = "l")
 # Run Subsets
