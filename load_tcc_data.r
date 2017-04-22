@@ -33,7 +33,7 @@ convertCurrency <- function(currency) {
 
 
 # list.files()
-TCC <- read_csv("TransmissionContracts_2010_2016.csv")
+TCC <- read_csv("TransmissionContracts_2008_2016.csv")
 #TCC #quick review
 #summary(TCC)
 
@@ -105,6 +105,15 @@ TCC_monthly_contracts$winter_month <- ifelse(test = (month(TCC_monthly_contracts
 
 
 ###############################
+### Subset TCC to 1 year   ###
+#############################
+
+TCC_1yr <- TCC %>%
+        filter(days > 187 & days < 366)
+
+
+
+###############################
 ### Subset TCC to 6 month  ###
 #############################
 
@@ -118,7 +127,6 @@ TCC_6mo <- TCC %>%
 
 TCC_1yr <- TCC %>%
         filter(days > 187 & days < 366)
-
 
 
 

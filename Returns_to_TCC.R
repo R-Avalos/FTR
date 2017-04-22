@@ -1,5 +1,5 @@
 ###### TCC Analysis #########################################################
-# Reviewing returns to TCCs within NYISO 2010-2016
+# Reviewing returns to TCCs within NYISO 2008-2016
 # Breakdown of 1 month, 6 month, 1 year, >1 year, all
 # Breakdown by marketp participants
 rm(list = ls()) #Clear Workspace
@@ -17,7 +17,7 @@ library(scales)
 ###  Load Data  ###################
 source(file = "load_dam_data.r", encoding = "UTF-8") # Load Day Ahead Market Data
 source(file = "load_tcc_data.r", encoding = "UTF-8") # Load Transmission  Congestion 
-T_Bill <- read.csv("GS1M.csv", stringsAsFactors = FALSE) #1 month treasury bill return
+T_Bill <- read.csv("GS1M_2008_2016.csv", stringsAsFactors = FALSE) #1 month treasury bill return, 2008-2016
 # Source = https://fred.stlouisfed.org/series/GS1M
 
 
@@ -36,10 +36,11 @@ POI_join <- left_join(x = TCC_monthly_contracts, y = monthly_DAM_POI, by = c("PO
 ## Join DAM data for Point of Withdrawal to TCCs
 TCC_DAM_Monthly <- left_join(x = POI_join, y = monthly_DAM_POW, by = c("POW ID", "year", "month")) 
 #summary(TCC_DAM_Monthly)
-remove(POI_join) #remove
+remove(monthly_DAM_POI, monthly_DAM_POW, TCC, POI_join)#remove execess data frames
+
 
 TCC_DAM_Monthly <- TCC_DAM_Monthly %>%
-        filter (`Start Date` >= ymd("2010-1-1") & `End Date` <= ymd("2016-12-31")) # subset to 2010 through 2016
+        filter (`Start Date` >= ymd("2008-1-1") & `End Date` <= ymd("2016-12-31")) # subset to 2008 through 2016
 
 ## Join T_Bill
 TCC_DAM_Monthly <- left_join(x = TCC_DAM_Monthly, y = T_Bill, by = c("year", "month"))
@@ -63,15 +64,16 @@ TCC_DAM_Monthly$profit <- TCC_DAM_Monthly$revenue - TCC_DAM_Monthly$cost
 TCC_DAM_Monthly$abs_mktprice <- abs(TCC_DAM_Monthly$cost)
 # Need to save account for $0.00 market clearing price
 # Change 0.00 to 0.001
-TCC_DAM_Monthly$abs_mktprice[TCC_DAM_Monthly$abs_mktprice == 0.00] <- 0.01 
+TCC_DAM_Monthly$abs_mktprice[TCC_DAM_Monthly$abs_mktprice == 0.00] <- 0.01 #small adjustment to cacluate returns of zero price items 
 #summary(TCC_DAM_Monthly$abs_mktprice)
 TCC_DAM_Monthly$return <- (TCC_DAM_Monthly$profit/TCC_DAM_Monthly$abs_mktprice)*100
 #summary(TCC_DAM_Monthly$return)
 
 ## TCC Return minus T_Bill
-TCC_DAM_Monthly$excess_return <- TCC_DAM_Monthly$return-TCC_DAM_Monthly$GS1M #Return minus risk free rate of return
+TCC_DAM_Monthly$excess_percent_return <- TCC_DAM_Monthly$return-TCC_DAM_Monthly$GS1M #Return minus risk free rate of return
 
-# summary(TCC_DAM_Monthly$excess_return) #this is a percent!
+
+# summary(TCC_DAM_Monthly$excess_percent_return) #this is a percent
 # prettyNum(mean(TCC_DAM_Monthly$excess_return), big.mark = ",") #this is a percent!
 # prettyNum(mean(TCC_DAM_Monthly$return), big.mark = ",") #seems high
 # prettyNum(sum(TCC_DAM_Monthly$GS1M), big.mark = ",")
@@ -82,11 +84,11 @@ TCC_DAM_Monthly$excess_return <- TCC_DAM_Monthly$return-TCC_DAM_Monthly$GS1M #Re
 # hist(TCC_DAM_Monthly$excess_return, breaks = 10, ylim = c(-10, 1000))
 
 ####
-#sum(TCC_DAM_Monthly$profit)/sum(TCC_DAM_Monthly$cost) # Quick check, around 48% market return...
+# sum(TCC_DAM_Monthly$profit)/sum(TCC_DAM_Monthly$cost) # Quick check, around 48% market return...
 allocated_TCC <- subset(TCC_DAM_Monthly, allocated >0)
 market_TCC <- subset(TCC_DAM_Monthly, allocated <1)
-summary(allocated_TCC$profit, na.rm = TRUE)
-summary(market_TCC$profit, na.rm = TRUE)
+# summary(allocated_TCC$profit, na.rm = TRUE)
+# summary(market_TCC$profit, na.rm = TRUE)
 
 
 
@@ -100,9 +102,52 @@ TCC_Path_Returns <- TCC_DAM_Monthly %>%
                   Path_Profits = sum(profit),
                   Path_abs_mktprice = sum(abs_mktprice),
                   Path_Returns = sum(return),
-                  Path_excess_return = sum(excess_return),
+                  Path_excess_return = sum(excess_percent_return),
                   List_Holders = list(`Primary Holder`)
                   )
+
+# Total Market monthly MWh
+TCC_Path_mwh_m <- TCC_DAM_Monthly %>%
+        group_by(year, month) %>%
+        summarize(Market_MWH = sum(mwh_calc))
+
+# Left join market Mwh to Path Returns
+TCC_Path_Returns <- left_join(TCC_Path_Returns, TCC_Path_mwh_m, by = c("year", "month"))
+
+### Add Path Names
+TCC_Path_Returns$Path_Name <- paste0(TCC_Path_Returns$`POI ID`, "-->", TCC_Path_Returns$`POW ID`)
+
+
+### Sum or Monthly Returns
+# TCC_Mkt_month_R <- TCC_Path_Returns %>%
+#         group_by(year, month) %>%
+#         summarize(Monthly_Market_Profit = sum(Path_Profits))
+# 
+# plot(TCC_Mkt_month_R$Monthly_Market_Profit)
+# prettyNum(sum(TCC_Mkt_month_R$Monthly_Market_Profit), big.mark = ",") #Data check
+# remove(TCC_Mkt_month_R)
+
+
+# R_m  = path_profit * (TotalMW_i/TotalMW_m) for month
+TCC_Path_Returns$MWh_ratio <- TCC_Path_Returns$Path_MWh_calc/TCC_Path_Returns$Market_MWH
+TCC_Path_Returns$Return_Mkt <- TCC_Path_Returns$Path_Profits*TCC_Path_Returns$MWh_ratio
+
+Mkt_Portfolio_Monthly <- TCC_Path_Returns %>% 
+        group_by(year, month) %>%
+        summarize(Market_Returns = sum(Return_Mkt), 
+                  Invested = sum(Path_Cost), 
+                  Invested_abs = sum(abs(Path_Cost)),
+                  Revenue = sum(Path_Revenue),
+                  Profit = sum(Path_Profits)
+                  )
+summary(Mkt_Portfolio_Monthly$year)
+
+summary(TCC_Path_Returns$year)
+prettyNum(sum(TCC_Path_Returns$Path_Profits), big.mark = ",")
+prettyNum(sum(Mkt_Portfolio_Monthly$Profit), big.mark = ",")
+plot(TCC_Path_Returns$year, TCC_Path_Returns$Path_Profits)
+plot(Mkt_Portfolio_Monthly$year, Mkt_Portfolio_Monthly$Profit)
+
 
 #TCC_Path_Returns$List_Holders[2] #Check names in list
 # summary(TCC_Path_Returns$Path_excess_return)
@@ -121,30 +166,74 @@ TCC_Path_Returns <- TCC_DAM_Monthly %>%
 # prettyNum(sum(x$Path_Profits), big.mark = ",")
 
 
-holder_return <- TCC_DAM_Monthly %>%
+holder_return_yearly <- TCC_DAM_Monthly %>%
         group_by(`Primary Holder`, year) %>%
         summarise(Total_profit = sum(profit), 
-                  Mean_excess_return = mean(excess_return),
-                  Median_excess_return = median(excess_return))
+                  Mean_excess_return = mean(excess_percent_return),
+                  Median_excess_return = median(excess_percent_return))
+
+holder_return_monthly <- TCC_DAM_Monthly %>%
+        group_by(`Primary Holder`, year, month) %>%
+        summarise(Total_profit = sum(profit), 
+                  Mean_excess_return = mean(excess_percent_return),
+                  Median_excess_return = median(excess_percent_return))
+holder_return_monthly$Date <- ymd(paste0(holder_return_monthly$year, "-",
+                                         holder_return_monthly$month, "-",
+                                         "16"))
+
+holder_return_08_16 <- TCC_DAM_Monthly %>%
+        group_by(`Primary Holder`) %>%
+        summarise(Total_profit = sum(profit), 
+                  Mean_excess_return = mean(excess_percent_return),
+                  Median_excess_return = median(excess_percent_return))
 
 
 ### Exporatory Plots #####
-plot_holder <- ggplot(holder_return,
+plot_holder_yr <- ggplot(holder_return_yearly,
                       aes(x = year, y = Total_profit, color = `Primary Holder`)) +
         geom_line(alpha = 0.3) +
         geom_hline(yintercept = 0, color = "black") +
         scale_y_continuous(labels = comma) +
         labs(
-                title = "Profits by Market Participant, Monthly TCC from 2010-2016",
-                subtitle = "Each line represents a single market participants returns over time.",
+                title = "Profits by Market Participant, Yearly TCC from 2008-2016",
+                subtitle = "Each line represents a single market participant return over time.",
                 y = "Total Profit",
                 x = ""
         ) +
         theme_tufte() +
         theme(legend.position = "none")
-plot_holder
+plot_holder_yr
 #ggMarginal(plot_holder, type = "density", margins = "y", color = "light grey") # Add density plot on for profit
-plot_density_holder <- ggplot(holder_return, aes(Total_profit)) +
+
+plot_holder_monthly <- ggplot(holder_return_monthly,
+                         aes(x = Date, y = Total_profit, color = `Primary Holder`)) +
+        geom_line(alpha = 0.3) +
+        geom_hline(yintercept = 0, color = "black", alpha = 0.5) +
+        scale_y_continuous(labels = comma) +
+        labs(
+                title = "Profits by Market Participant, Monthly TCC from 2008-2016",
+                subtitle = "Each line represents a single market participant return over time.",
+                y = "Total Profit",
+                x = ""
+        ) +
+        theme_tufte() +
+        theme(legend.position = "none")
+plot_holder_monthly
+
+
+plot_density_holder <- ggplot(holder_return_yearly, aes(Total_profit)) +
+        geom_density(fill = "black", alpha = 0.1) +
+        geom_vline(xintercept = 0, color = "dodger blue", alpha = 0.75) +
+        scale_x_continuous(labels = comma) +
+        labs(
+                title = "Density Plot, Yearly Profits for Market Participants",
+                subtitle = "Non-Truncated Density Plot",
+                x = "Monthly Holder Returns"
+        ) +
+        theme_tufte() 
+plot_density_holder
+
+plot_density_holder <- ggplot(holder_return_yearly, aes(Total_profit)) +
         geom_density(fill = "black", alpha = 0.1) +
         geom_vline(xintercept = 0, color = "dodger blue", alpha = 0.75) +
         scale_x_continuous(labels = comma) +
@@ -155,7 +244,6 @@ plot_density_holder <- ggplot(holder_return, aes(Total_profit)) +
         ) +
         theme_tufte() 
 plot_density_holder
-
 
 
 
@@ -238,4 +326,4 @@ str(T_Bill)
 summary(TCC_monthly_contracts)
 summary(TCC_DAM_Monthly)
 x2 <- TCC %>% 
-        filter(`Start Date` >= ymd("2010-1-1") & `End Date` <= ymd("2016-12-31"))
+        filter(`Start Date` >= ymd("2008-1-1") & `End Date` <= ymd("2016-12-31"))

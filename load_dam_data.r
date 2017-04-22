@@ -47,7 +47,7 @@ convertAccounting <- function(accounting) {
 ##################################
 
 filenames <- list.files(path = "./DAM", 
-                        pattern = "*.csv") #get a list of all day ahead market prices
+                        pattern = "*.csv") #get a list of all day ahead market price files
 
 setwd("./DAM") #change working director to DAM
 
@@ -55,7 +55,6 @@ import_list <- lapply(filenames, read_csv_filename) # convert files in the list 
 dam <- do.call("rbind", import_list) # combined the data frames into one
 setwd("..") # return to parent direcotry
 remove(filenames, import_list) # remove unnecessary files
-
 
 ## Format data
 dam$Cost_of_Losses <- convertAccounting(dam$Cost_of_Losses) 
@@ -91,8 +90,10 @@ monthly_DAM_POW <- rename(monthly_DAM, `POW ID` = PTID,
                           Total_Hours_POW = Total_Hours,
                           Congested_Hours_POW = Congested_Hours)
 
-print(summary(monthly_DAM)) # print summary data
-print("Day Ahead Market Data Loaded") # print informing user data is loaded
 remove(dam)
 remove(monthly_DAM)
 remove(myvars)
+
+#print(summary(monthly_DAM)) # print summary data
+print("Day Ahead Market Data Loaded") # print informing user data is loaded
+
