@@ -4,8 +4,6 @@
 # Breakdown by marketp participants
 rm(list = ls()) #Clear Workspace
 
-
-
 ###  Setup Enviornment ############
 options(scipen=999) #remove scientific notation
 library(stargazer) # package for pretty table outputs
@@ -13,11 +11,29 @@ library(ggplot2)
 library(ggthemes) #tufte theme
 library(scales)
 
+#### Create a connection to postgresql database ####
+pw <- scan(".pgpass", what="")  # read password from local file
+database_name <- "NYISO"
+host_name <- scan(".pghn", what="") 
+port_name <- as.numeric(scan(".pgpn", what="")) #read local file. Yep, even for a port name
+user_name <- scan(".pgun", what="")  #postgres
+db_driver <- dbDriver("PostgreSQL") # loads PostgreSQL driver
+
+con <- dbConnect(drv = db_driver,
+                 dbname = database_name,
+                 host = host_name,
+                 port = port_name,
+                 user = user_name,
+                 password = pw) #creates a connection to database to call upon
+remove(pw, database_name, host_name, port_name, user_name) # remove variable, retain connect call
+
+
 
 ###  Load Data  ###################
 source(file = "load_dam_data.r", encoding = "UTF-8") # Load Day Ahead Market Data
 source(file = "load_tcc_data.r", encoding = "UTF-8") # Load Transmission  Congestion 
 T_Bill <- read.csv("GS1M_2008_2016.csv", stringsAsFactors = FALSE) #1 month treasury bill return, 2008-2016
+# remove(T_Bill)
 # Source = https://fred.stlouisfed.org/series/GS1M
 
 
@@ -40,7 +56,7 @@ remove(monthly_DAM_POI, monthly_DAM_POW, TCC, POI_join)#remove execess data fram
 
 
 TCC_DAM_Monthly <- TCC_DAM_Monthly %>%
-        filter (`Start Date` >= ymd("2008-1-1") & `End Date` <= ymd("2016-12-31")) # subset to 2008 through 2016
+        filter (`Start Date` >= ymd("2010-1-1") & `End Date` <= ymd("2016-12-31")) # subset to 2010 through 2016
 
 ## Join T_Bill
 TCC_DAM_Monthly <- left_join(x = TCC_DAM_Monthly, y = T_Bill, by = c("year", "month"))
@@ -85,17 +101,18 @@ TCC_DAM_Monthly$excess_percent_return <- TCC_DAM_Monthly$return-TCC_DAM_Monthly$
 
 ####
 # sum(TCC_DAM_Monthly$profit)/sum(TCC_DAM_Monthly$cost) # Quick check, around 48% market return...
-allocated_TCC <- subset(TCC_DAM_Monthly, allocated >0)
-market_TCC <- subset(TCC_DAM_Monthly, allocated <1)
+# allocated_TCC <- subset(TCC_DAM_Monthly, allocated >0)
+# market_TCC <- subset(TCC_DAM_Monthly, allocated <1)
 # summary(allocated_TCC$profit, na.rm = TRUE)
 # summary(market_TCC$profit, na.rm = TRUE)
 
 
 
 ###  Returns by Path  #############
-
+## 51,158 rows
 TCC_Path_Returns <- TCC_DAM_Monthly %>%
-        group_by(year, month, `POI ID`, `POW ID`) %>%
+        group_by(year, month, `POI ID`, `POI Name`, `POI Zone`, 
+                 `POW ID`, `POW Name`, `POW Zone`) %>%
         summarize(Path_Revenue = sum(revenue),
                   Path_Cost = sum(cost),
                   Path_MWh_calc = sum(mwh_calc),
@@ -115,7 +132,7 @@ TCC_Path_mwh_m <- TCC_DAM_Monthly %>%
 TCC_Path_Returns <- left_join(TCC_Path_Returns, TCC_Path_mwh_m, by = c("year", "month"))
 
 ### Add Path Names
-TCC_Path_Returns$Path_Name <- paste0(TCC_Path_Returns$`POI ID`, "-->", TCC_Path_Returns$`POW ID`)
+TCC_Path_Returns$Path_Name <- paste0(TCC_Path_Returns$`POI ID`, "_to_", TCC_Path_Returns$`POW ID`)
 
 
 ### Sum or Monthly Returns
@@ -132,6 +149,26 @@ TCC_Path_Returns$Path_Name <- paste0(TCC_Path_Returns$`POI ID`, "-->", TCC_Path_
 TCC_Path_Returns$MWh_ratio <- TCC_Path_Returns$Path_MWh_calc/TCC_Path_Returns$Market_MWH
 TCC_Path_Returns$Return_Mkt <- TCC_Path_Returns$Path_Profits*TCC_Path_Returns$MWh_ratio
 
+# Path Table ####
+# Unique paths, add count of months
+Path_df <- TCC_Path_Returns %>%
+        group_by(Path_Name, `POI ID`, `POI Name`, `POI Zone`, 
+                 `POW ID`, `POW Name`, `POW Zone`) %>%
+        summarize(Path_Revenue = sum(Path_Revenue),
+                  Path_Cost = sum(Path_Cost),
+                  Path_MWh_calc = sum(Path_MWh_calc),
+                  Path_Profits = sum(Path_Profits),
+                  Path_abs_mktprice = sum(Path_abs_mktprice),
+                  Market_MWH = sum(Market_MWH),
+                  Months_Active = n()
+                  )
+# str(Path_df)
+Path_df <- as.data.frame(Path_df) # change from grouped_df to df
+
+dbWriteTable(con,'paths', Path_df, row.names=FALSE) #create table for paths in database
+
+
+###
 Mkt_Portfolio_Monthly <- TCC_Path_Returns %>% 
         group_by(year, month) %>%
         summarize(Market_Returns = sum(Return_Mkt), 
@@ -186,6 +223,9 @@ holder_return_08_16 <- TCC_DAM_Monthly %>%
         summarise(Total_profit = sum(profit), 
                   Mean_excess_return = mean(excess_percent_return),
                   Median_excess_return = median(excess_percent_return))
+
+
+
 
 
 ### Exporatory Plots #####
