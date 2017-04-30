@@ -54,7 +54,7 @@ remove(pw, database_name, host_name, port_name, user_name) # remove variable, re
 
 db_list_tables(con) #list tables
 dbListFields(con, "paths")
-#dbSendQuery(con, "drop table dam_daily_totals")
+#dbSendQuery(con, "drop table monthly_path_returns")
 
 
 #### 2010 DAM Daily Data ####

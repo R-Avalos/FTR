@@ -10,6 +10,7 @@ library(stargazer) # package for pretty table outputs
 library(ggplot2)
 library(ggthemes) #tufte theme
 library(scales)
+library(RPostgreSQL)
 
 #### Create a connection to postgresql database ####
 pw <- scan(".pgpass", what="")  # read password from local file
@@ -27,7 +28,9 @@ con <- dbConnect(drv = db_driver,
                  password = pw) #creates a connection to database to call upon
 remove(pw, database_name, host_name, port_name, user_name) # remove variable, retain connect call
 
-
+RPostgreSQL::dbListTables(con) #list tables
+# dbListFields(con, "paths")
+# dbSendQuery(con, "drop table monthly_path_returns")
 
 ###  Load Data  ###################
 source(file = "load_dam_data.r", encoding = "UTF-8") # Load Day Ahead Market Data
@@ -107,20 +110,16 @@ TCC_DAM_Monthly$excess_percent_return <- TCC_DAM_Monthly$return-TCC_DAM_Monthly$
 # summary(market_TCC$profit, na.rm = TRUE)
 
 
-
 ###  Returns by Path  #############
 ## 51,158 rows
 TCC_Path_Returns <- TCC_DAM_Monthly %>%
         group_by(year, month, `POI ID`, `POI Name`, `POI Zone`, 
                  `POW ID`, `POW Name`, `POW Zone`) %>%
-        summarize(Path_Revenue = sum(revenue),
-                  Path_Cost = sum(cost),
-                  Path_MWh_calc = sum(mwh_calc),
-                  Path_Profits = sum(profit),
-                  Path_abs_mktprice = sum(abs_mktprice),
-                  Path_Returns = sum(return),
-                  Path_excess_return = sum(excess_percent_return),
-                  List_Holders = list(`Primary Holder`)
+        summarize(Path_Revenue_mo = sum(revenue),
+                  Path_Cost_mo = sum(cost),
+                  Path_MWH_calc_mo = sum(mwh_calc),
+                  Path_Profits_mo = sum(profit),
+                  Path_abs_cost_mo = sum(abs_mktprice)
                   )
 
 # Total Market monthly MWh
@@ -146,8 +145,16 @@ TCC_Path_Returns$Path_Name <- paste0(TCC_Path_Returns$`POI ID`, "_to_", TCC_Path
 
 
 # R_m  = path_profit * (TotalMW_i/TotalMW_m) for month
-TCC_Path_Returns$MWh_ratio <- TCC_Path_Returns$Path_MWh_calc/TCC_Path_Returns$Market_MWH
-TCC_Path_Returns$Return_Mkt <- TCC_Path_Returns$Path_Profits*TCC_Path_Returns$MWh_ratio
+TCC_Path_Returns$MWh_ratio_mo <- TCC_Path_Returns$Path_MWH_calc_mo/TCC_Path_Returns$Market_MWH
+TCC_Path_Returns$Return_Mkt_mo <- TCC_Path_Returns$Path_Profits_mo*TCC_Path_Returns$MWh_ratio_mo
+
+
+colnames(TCC_Path_Returns) <- dbSafeNames(colnames(TCC_Path_Returns))
+TCC_Path_Returns <- as.data.frame(TCC_Path_Returns)
+
+# dbWriteTable(con,'monthly_path_returns', TCC_Path_Returns, row.names=FALSE) #create table and load monthly path returns
+
+
 
 # Path Table ####
 # Unique paths, add count of months
@@ -166,7 +173,6 @@ Path_df <- TCC_Path_Returns %>%
 Path_df <- as.data.frame(Path_df) # change from grouped_df to df
 
 dbWriteTable(con,'paths', Path_df, row.names=FALSE) #create table for paths in database
-
 
 ###
 Mkt_Portfolio_Monthly <- TCC_Path_Returns %>% 
@@ -356,6 +362,19 @@ plot_profit_truncated
 
 
 #### Stargazer results
+
+str(TCC_Path_Returns)
+stargazer(TCC_Path_Returns, type = "html", median = TRUE, digits = 2, out = "TCC_Path_table.html")
+
+
+remove(TCC_Path_Returns)
+
+DAM_daily <- dbGetQuery(con, "SELECT * FROM dam_daily_totals") #load from local
+summary(DAM_daily)
+stargazer(DAM_daily, type = "html", median = TRUE, digits = 2, out = "DAM_daily_table.html") 
+
+
+
 TCC_DAM_Monthly_table <- as.data.frame(TCC_DAM_Monthly) #convert to data frame to play nicely with stargazer
 stargazer(TCC_DAM_Monthly_table, type = "html", median = TRUE, digits = 2, out = "TCC_DAM_table.html") 
 stargazer(T_Bill, type = "html", out = "t_bill_table.html")
