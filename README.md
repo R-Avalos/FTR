@@ -1,16 +1,30 @@
 # FTR
-###Financial Transmission Right Market for the NYISO  
+## Financial Transmission Right (Transmission Congestion Contrac) Market for the NYISO  
    
-Modeling the returns to FTRs from 2010 through 2016 within the NYISO region.  
+Modeling the returns to monthly TCCs from 2010 through 2016 within the NYISO region. Data is first acquired from NYISO and St. Louis Federal Reserve and saved to a local database (user machine). The data is transformed to calculate profits and returns to investment. The transformed data is then analyzed with a CAPM model and GARCH to deteremine the alpha's of monthly TCCs.
+
+### I. Loading Data  
+#### load_dam_data.r  
+Load day ahead market data.   
+#### load_tcc.data.r   
+Load transmission congestion contract data.   
+#### load_daily_dam_to_DB.r   
+Load daily day ahead market data and save to local postgresql database.
+#### load_transform_data.r
+Load already transformed data (load > transform and save > load transformed)
+#### Exploratory_DataSources.r  
+Scratch space for initial exploratory analysis and work.
    
-### Exploratory_DataSources.r  
    
-Extract, transform, and loading of FTR contract and Day Ahead Market Data. The respectie DAM nodal congestion charges are matched with the FTR contract data to determine the returns and profit of each contract.   
+### II. Transforming Data   
+#### Returns_to_TCC.R   
+Calculating profits and returns to TCCs   
    
-### Garch_modeling.r   
-   
+    
+### III. Analysis   
+#### Garch_modeling.r   
 Capital asset returns modeling accounting for time and network effects on congestion.   
 
-
+   
 ### Author  
 Please contact author with questions or comments.
