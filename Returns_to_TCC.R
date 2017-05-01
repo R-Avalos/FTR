@@ -159,7 +159,7 @@ TCC_Path_Returns <- as.data.frame(TCC_Path_Returns)
 # Path Table ####
 # Unique paths, add count of months
 Path_df <- TCC_Path_Returns %>%
-        group_by(Path_Name, `POI ID`, `POI Name`, `POI Zone`, 
+        group_by(path_name, `POI ID`, `POI Name`, `POI Zone`, 
                  `POW ID`, `POW Name`, `POW Zone`) %>%
         summarize(Path_Revenue = sum(Path_Revenue),
                   Path_Cost = sum(Path_Cost),
@@ -172,16 +172,16 @@ Path_df <- TCC_Path_Returns %>%
 # str(Path_df)
 Path_df <- as.data.frame(Path_df) # change from grouped_df to df
 
-dbWriteTable(con,'paths', Path_df, row.names=FALSE) #create table for paths in database
+# dbWriteTable(con,'paths', Path_df, row.names=FALSE) #create table for paths in database
 
 ###
 Mkt_Portfolio_Monthly <- TCC_Path_Returns %>% 
         group_by(year, month) %>%
-        summarize(Market_Returns = sum(Return_Mkt), 
-                  Invested = sum(Path_Cost), 
-                  Invested_abs = sum(abs(Path_Cost)),
-                  Revenue = sum(Path_Revenue),
-                  Profit = sum(Path_Profits)
+        summarize(Market_Returns = sum(return_mkt), 
+                  Invested = sum(path_cost), 
+                  Invested_abs = sum(abs(path_cost)),
+                  Revenue = sum(path_revenue),
+                  Profit = sum(path_profits)
                   )
 summary(Mkt_Portfolio_Monthly$year)
 
@@ -231,7 +231,12 @@ holder_return_08_16 <- TCC_DAM_Monthly %>%
                   Median_excess_return = median(excess_percent_return))
 
 
-
+holder_return_2010_2016 <- TCC_DAM_Monthly %>%
+        group_by(`Primary Holder`) %>%
+        summarise(Total_profit = sum(profit), 
+                  Mean_excess_return = mean(excess_percent_return),
+                  Median_excess_return = median(excess_percent_return))
+write.csv(holder_return_2010_2016, "holder_return.csv")
 
 
 ### Exporatory Plots #####
@@ -267,17 +272,6 @@ plot_holder_monthly <- ggplot(holder_return_monthly,
 plot_holder_monthly
 
 
-plot_density_holder <- ggplot(holder_return_yearly, aes(Total_profit)) +
-        geom_density(fill = "black", alpha = 0.1) +
-        geom_vline(xintercept = 0, color = "dodger blue", alpha = 0.75) +
-        scale_x_continuous(labels = comma) +
-        labs(
-                title = "Density Plot, Yearly Profits for Market Participants",
-                subtitle = "Non-Truncated Density Plot",
-                x = "Monthly Holder Returns"
-        ) +
-        theme_tufte() 
-plot_density_holder
 
 plot_density_holder <- ggplot(holder_return_yearly, aes(Total_profit)) +
         geom_density(fill = "black", alpha = 0.1) +

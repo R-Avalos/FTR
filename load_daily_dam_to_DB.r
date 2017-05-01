@@ -52,6 +52,8 @@ con <- dbConnect(drv = db_driver,
                  password = pw) #creates a connection to database to call upon
 remove(pw, database_name, host_name, port_name, user_name) # remove variable, retain connect call
 
+#### #####
+
 db_list_tables(con) #list tables
 dbListFields(con, "paths")
 #dbSendQuery(con, "drop table monthly_path_returns")
