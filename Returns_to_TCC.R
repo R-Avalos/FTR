@@ -149,7 +149,7 @@ TCC_Path_Returns$MWh_ratio_mo <- TCC_Path_Returns$Path_MWH_calc_mo/TCC_Path_Retu
 TCC_Path_Returns$Return_Mkt_mo <- TCC_Path_Returns$Path_Profits_mo*TCC_Path_Returns$MWh_ratio_mo
 
 
-colnames(TCC_Path_Returns) <- dbSafeNames(colnames(TCC_Path_Returns))
+# colnames(TCC_Path_Returns) <- dbSafeNames(colnames(TCC_Path_Returns))
 TCC_Path_Returns <- as.data.frame(TCC_Path_Returns)
 
 # dbWriteTable(con,'monthly_path_returns', TCC_Path_Returns, row.names=FALSE) #create table and load monthly path returns
@@ -159,13 +159,13 @@ TCC_Path_Returns <- as.data.frame(TCC_Path_Returns)
 # Path Table ####
 # Unique paths, add count of months
 Path_df <- TCC_Path_Returns %>%
-        group_by(path_name, `POI ID`, `POI Name`, `POI Zone`, 
+        group_by(Path_Name, `POI ID`, `POI Name`, `POI Zone`, 
                  `POW ID`, `POW Name`, `POW Zone`) %>%
-        summarize(Path_Revenue = sum(Path_Revenue),
-                  Path_Cost = sum(Path_Cost),
-                  Path_MWh_calc = sum(Path_MWh_calc),
-                  Path_Profits = sum(Path_Profits),
-                  Path_abs_mktprice = sum(Path_abs_mktprice),
+        summarize(Path_Revenue = sum(Path_Revenue_mo),
+                  Path_Cost = sum(Path_Cost_mo),
+                  Path_MWh_calc = sum(Path_MWH_calc_mo),
+                  Path_Profits = sum(Path_Profits_mo),
+                  Path_abs_mktprice = sum(Path_abs_cost_mo),
                   Market_MWH = sum(Market_MWH),
                   Months_Active = n()
                   )
@@ -177,11 +177,11 @@ Path_df <- as.data.frame(Path_df) # change from grouped_df to df
 ###
 Mkt_Portfolio_Monthly <- TCC_Path_Returns %>% 
         group_by(year, month) %>%
-        summarize(Market_Returns = sum(return_mkt), 
-                  Invested = sum(path_cost), 
-                  Invested_abs = sum(abs(path_cost)),
-                  Revenue = sum(path_revenue),
-                  Profit = sum(path_profits)
+        summarize(Market_Returns = sum(Return_Mkt_mo), 
+                  Invested = sum(Path_Cost_mo), 
+                  Invested_abs = sum(Path_abs_cost_mo),
+                  Revenue = sum(Path_Revenue_mo),
+                  Profit = sum(Path_Profits_mo)
                   )
 summary(Mkt_Portfolio_Monthly$year)
 
@@ -240,6 +240,31 @@ write.csv(holder_return_2010_2016, "holder_return.csv")
 
 
 ### Exporatory Plots #####
+library(directlabels)
+holder_return_yearly$`Primary Holder`
+holder_return_yearly_plotname <- as.data.frame(holder_return_yearly)
+
+colnames(holder_return_yearly_plotname) <- c("primary_holder","year", "Total_Profit", "Mean_excess_return", "Media_excess_return")
+
+
+plot_holder_yr_color <- ggplot(holder_return_yearly_plotname,
+                         aes(x = year, y = Total_Profit, color = primary_holder)) +
+        geom_line(alpha = 0.3) +
+        geom_hline(yintercept = 0, color = "black") +
+        scale_y_continuous(labels = comma) +
+        labs(
+                title = "Yearly Profits by Market Participant, Monthly TCC from 2008-2016",
+                subtitle = "Each line represents a single market participant return over time.",
+                y = "Total Profit",
+                x = ""
+        ) +
+        theme_tufte() +
+        theme(legend.position = "none")
+
+plot_holder_yr_color
+direct.label(plot_holder_yr_color, "top.points")
+
+
 plot_holder_yr <- ggplot(holder_return_yearly,
                       aes(x = year, y = Total_profit, color = `Primary Holder`)) +
         geom_line(alpha = 0.3) +
@@ -252,8 +277,19 @@ plot_holder_yr <- ggplot(holder_return_yearly,
                 x = ""
         ) +
         theme_tufte() +
-        theme(legend.position = "none")
+        theme(legend.position = "none",
+              plot.background = element_rect(fill = "transparent", color = NA),
+              plot.title = element_text(color = "white"),
+              plot.subtitle = element_text(color = "white"),
+              axis.text = element_text(color = "white"),
+              axis.title.y = element_text(color = "white")
+              )
 plot_holder_yr
+
+png('plot_holder_test.png',width=1200,height=800,units="px",bg = "transparent")
+print(plot_holder_yr)
+dev.off()
+
 #ggMarginal(plot_holder, type = "density", margins = "y", color = "light grey") # Add density plot on for profit
 
 plot_holder_monthly <- ggplot(holder_return_monthly,
@@ -272,18 +308,18 @@ plot_holder_monthly <- ggplot(holder_return_monthly,
 plot_holder_monthly
 
 
-
 plot_density_holder <- ggplot(holder_return_yearly, aes(Total_profit)) +
         geom_density(fill = "black", alpha = 0.1) +
         geom_vline(xintercept = 0, color = "dodger blue", alpha = 0.75) +
         scale_x_continuous(labels = comma) +
         labs(
                 title = "Density Plot, Monthly Profits for Market Participants",
-                subtitle = "Non-Truncated Density Plot",
+                subtitle = "NYISO Monthly TCC Market Participants 2010-2016, \nNon-Truncated Density Plot",
                 x = "Monthly Holder Returns"
         ) +
         theme_tufte() 
 plot_density_holder
+
 
 
 
@@ -348,11 +384,6 @@ plot_profit_truncated <- ggplot(TCC_DAM_Monthly,
         theme_tufte() 
 plot_profit_truncated
 # ggMarginal(plot_profit, type = "density", margins = "y", color = "light grey") # Add density plot on for profit
-
-
-
-
-
 
 
 #### Stargazer results

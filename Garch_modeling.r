@@ -37,14 +37,7 @@ TCC_Path <- dbGetQuery(con, "SELECT * FROM paths") # 10,532 unique paths
 summary(TCC_Path)
 
 x <- dbGetQuery(con, "SELECT * FROM monthly_path_returns")
-PretyNum(sum(x$path_profits_mo), comma)
-prettyNum(sum(x$path_profits_mo), big.mark = ",")
-remove(x)
 
-# TCC_Path_6mo <- TCC_Path %>%
-#         filter(Months_Active >= 6) # 2,428 with observations >= 6 months
-# remove(TCC_Path) # clean up
-#remove(TCC_Path_6mo)
 
 #### Select data with over 100 days of observations
 TCC_Path_4mo <- TCC_Path %>%
@@ -102,15 +95,6 @@ test_model1 <- Test_df_all1 %>%
         group_by(path_name) %>%
         do(garhc_fit = tryCatch(Garch_model_function(as.data.frame(.)), error=function(err) NA)) # run model for each path
 
-
-
-# test_model2 <- Test_df_all2 %>%
-#         group_by(path_name) %>%
-#         do(garhc_fit = tryCatch(Garch_model_function(as.data.frame(.)), error=function(err) NA)) # run model for each path
-# 
-# x <- Test_df_all2 %>%
-#         filter(path_name == "23514_to_23652")
-
 # test_model2$garhc_fit[[1]]
 # test_model2$garhc_fit[[1]]@fit$matcoef
 # x <- as.data.frame(test_model$garhc_fit[[5]]@fit$matcoef)
@@ -119,14 +103,12 @@ test_model1 <- Test_df_all1 %>%
 # signbias(test_model$garhc_fit[[1]])
 # infocriteria(test_model$garhc_fit[[1]])
 # plot(test_model$garhc_fit[[1]])
-sum(is.na(test_model$garhc_fit))
-# is.na(test_model$garhc_fit)
+# sum(is.na(test_model$garhc_fit))
 test_model$na <- is.na(test_model$garhc_fit) # find models that did not sovle
 summary(test_model$na)
 
 test_model <- test_model %>%
         filter(na == FALSE) #removes models that did not solve
-
 
 ### Create function to store results in data frame ####
 # Pull out results for models and save to data frame with associated path
