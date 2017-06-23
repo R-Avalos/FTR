@@ -249,11 +249,11 @@ colnames(holder_return_yearly_plotname) <- c("primary_holder","year", "Total_Pro
 
 plot_holder_yr_color <- ggplot(holder_return_yearly_plotname,
                          aes(x = year, y = Total_Profit, color = primary_holder)) +
-        geom_line(alpha = 0.3) +
+        geom_line(alpha = 0.75) +
         geom_hline(yintercept = 0, color = "black") +
         scale_y_continuous(labels = comma) +
         labs(
-                title = "Yearly Profits by Market Participant, Monthly TCC from 2008-2016",
+                title = "Yearly Profits by Market Participant, Monthly Transmission Congestion Contracts from 2008-2016",
                 subtitle = "Each line represents a single market participant return over time.",
                 y = "Total Profit",
                 x = ""
@@ -262,6 +262,7 @@ plot_holder_yr_color <- ggplot(holder_return_yearly_plotname,
         theme(legend.position = "none")
 
 plot_holder_yr_color
+ggMarginal(plot_holder_yr_color, type = "density", margins = "y")
 direct.label(plot_holder_yr_color, "top.points")
 
 
