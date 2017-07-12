@@ -287,9 +287,12 @@ plot_holder_yr <- ggplot(holder_return_yearly,
               )
 plot_holder_yr
 
+
 png('plot_holder_test.png',width=1200,height=800,units="px",bg = "transparent")
 print(plot_holder_yr)
 dev.off()
+
+
 
 #ggMarginal(plot_holder, type = "density", margins = "y", color = "light grey") # Add density plot on for profit
 

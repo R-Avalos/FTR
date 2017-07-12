@@ -230,7 +230,7 @@ systemic_plot_trunc <- ggplot(model_results_ja, aes(x = mxreg1, y = mu, color = 
 systemic_plot_trunc
 
 summary(model_results_ja$j_alpha)
-### Desnity Plot Betas
+### Density Plot Betas
 plot_density_beta <- ggplot(model_results_ja, aes(mxreg1)) +
         geom_density(fill = "black", alpha = 0.1) +
         geom_vline(xintercept = 0, color = "dodger blue", alpha = 0.75) +
