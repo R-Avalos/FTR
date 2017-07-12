@@ -265,10 +265,13 @@ plot_holder_yr_color
 ggMarginal(plot_holder_yr_color, type = "density", margins = "y")
 direct.label(plot_holder_yr_color, "top.points")
 
+# Graphics for web
+colfunc <- colorRampPalette(c("white", "blue"))
+plot(rep(1,17), col = colfunc(17), pch = 19, cex = 3)
 
 plot_holder_yr <- ggplot(holder_return_yearly,
                       aes(x = year, y = Total_profit, color = `Primary Holder`)) +
-        geom_line(alpha = 0.3) +
+        geom_line(size = 1.5) +
         geom_hline(yintercept = 0, color = "black") +
         scale_y_continuous(labels = comma) +
         labs(
@@ -279,16 +282,18 @@ plot_holder_yr <- ggplot(holder_return_yearly,
         ) +
         theme_tufte() +
         theme(legend.position = "none",
+              text = element_text(size = 24),
               plot.background = element_rect(fill = "transparent", color = NA),
               plot.title = element_text(color = "white"),
               plot.subtitle = element_text(color = "white"),
               axis.text = element_text(color = "white"),
               axis.title.y = element_text(color = "white")
-              )
+              ) +
+        scale_color_manual(values = colfunc(78))
 plot_holder_yr
 
 
-png('plot_holder_test.png',width=1200,height=800,units="px",bg = "transparent")
+png('plot_holder_test.png', type = 'cairo', width=900,height=300,units="px",bg = "transparent")
 print(plot_holder_yr)
 dev.off()
 
